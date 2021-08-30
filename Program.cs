@@ -9,40 +9,58 @@ namespace FileSender
 {
     class Program
     {
+        static List<string> filePathList = new List<string>();
+
         static void Main(string[] args)
         {
-            TcpClient client = new TcpClient("127.0.0.1", 9527);
+            SendFile(@"d:\test", "127.0.0.1", 9527);
+        }
+
+        public static void SendFile(string root, string ip, int port)
+        {
+            TcpClient client = new TcpClient(ip, port);
             NetworkStream ns = client.GetStream();
             StreamWriter sr = new StreamWriter(ns);
-            byte[] buffer = new byte[256];
+            byte[] buffer = new byte[4];
 
-            List<string> fileList = new List<string>
-            {
-                @"d:\test1.txt",
-                @"d:\test2.txt",
-                @"d:\test3.txt",
-                @"d:\test4.txt",
-            };
+            filePathList.Clear();
+            getFileRecur(root, root);
 
-            sr.WriteLine(fileList.Count);
+            sr.WriteLine(filePathList.Count);
             sr.Flush();
-            for (int i = 0; i < fileList.Count; i++)
+            for (int i = 0; i < filePathList.Count; i++)
             {
-                byte[] fileBytes = File.ReadAllBytes(fileList[i]);
+                byte[] fileBytes = File.ReadAllBytes(filePathList[i]);
                 Console.WriteLine(fileBytes.Length);
                 sr.WriteLine(fileBytes.Length);
                 sr.Flush();
-                string fileName = Path.GetRelativePath(@"d:\", fileList[i]);
+                string fileName = Path.GetRelativePath(root, filePathList[i]);
                 Console.WriteLine(fileName);
                 sr.WriteLine(fileName);
                 sr.Flush();
                 ns.Read(buffer);
-                client.Client.SendFile(fileList[i]);
+                client.Client.SendFile(filePathList[i]);
                 ns.Read(buffer);
             }
 
             sr.Close();
             client.Close();
+        }
+
+        public static void getFileRecur(string path, string root)
+        {
+            if (Directory.Exists(path))
+            {
+                foreach(string p in Directory.GetFiles(path))
+                {
+                    filePathList.Add(p);
+                }
+
+                foreach (string subDir in Directory.GetDirectories(path))
+                {
+                    getFileRecur(subDir, root);
+                }
+            }
         }
     }
 }
